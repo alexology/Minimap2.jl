@@ -630,11 +630,16 @@ function _align1_inv(opt::MapOptions, index::MinimapIndex, qlen::Int, qseqs, r1:
     (tl < opt.min_chain_score || tl > opt.max_gap) && return nothing
     mat = _score_matrix(opt.a, opt.b, opt.transition, opt.sc_ambi)
     tseq = reference_codes(index, Int(r1.rid), r1.re, r2.rs)
-    qseq = r1.rev ? qseqs[1][(r2.qe + 1):(r2.qe + ql)] : qseqs[2][(qlen - r2.qs + 1):(qlen - r2.qs + ql)]
-    score, q_off, t_off = ksw_ll_i16(reverse(qseq), reverse(tseq), 5, mat, opt.q, opt.e)
+    qfull = qseqs[r1.rev ? 1 : 2]
+    q_base = r1.rev ? Int(r2.qe) : qlen - Int(r2.qs)
+    score, q_off, t_off = ksw_ll_i16(reverse(qfull[(q_base + 1):(q_base + ql)]), reverse(tseq), 5, mat, opt.q, opt.e)
     score < opt.min_dp_max && return nothing
-    q_off = ql - (q_off + 1); t_off = tl - (t_off + 1)
-    _align_pair!(ez, opt, qseq[(q_off + 1):end], tseq[(t_off + 1):end], mat, unsafe_trunc(Int, opt.bw * 1.5), -1,
+    # The striped query profile is padded: the query end can fall past the
+    # window, making q_off negative. minimap2 then reads the bases before the
+    # window from the whole query buffer, and so does this slice.
+    q_off = max(ql - (q_off + 1), -q_base); t_off = tl - (t_off + 1)
+    qseq = qfull[(q_base + q_off + 1):(q_base + ql)]
+    _align_pair!(ez, opt, qseq, tseq[(t_off + 1):end], mat, unsafe_trunc(Int, opt.bw * 1.5), -1,
                  opt.zdrop, KSW_EZ_EXTZ_ONLY)
     isempty(ez.cigar) && return nothing
     r_inv = Region()
@@ -656,7 +661,7 @@ function _align1_inv(opt::MapOptions, index::MinimapIndex, qlen::Int, qseqs, r1:
     end
     r_inv.rs = r1.re + t_off
     r_inv.re = r_inv.rs + ez.max_t + 1
-    _update_extra!(r_inv, qseq[(q_off + 1):end], tseq[(t_off + 1):end], mat, opt.q, opt.e, (opt.flag & F_EQX) != 0,
+    _update_extra!(r_inv, qseq, tseq[(t_off + 1):end], mat, opt.q, opt.e, (opt.flag & F_EQX) != 0,
                    (opt.flag & (F_SR | F_SR_RNA)) == 0)
     return r_inv
 end

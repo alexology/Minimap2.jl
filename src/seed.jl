@@ -41,7 +41,7 @@ mutable struct _Seed
     flt::Bool
     seg_id::UInt32
     is_tandem::Bool
-    cr::Vector{UInt64}
+    cr::_PositionView
 end
 
 const _MAX_MAX_HIGH_OCC = 128

@@ -24,7 +24,8 @@ end
 # Per-read hash used to break ties between chains of equal score.
 function _read_hash(qname, qlen::Int, opt::MapOptions)
     h = (qname !== nothing && (opt.flag & F_NO_HASH_NAME) == 0) ? _x31_hash(qname) : UInt32(0)
-    h ⊻= _wang_hash(UInt32(qlen)) + _wang_hash(UInt32(opt.seed))
+    # minimap2 converts its int seed to an unsigned 32-bit key: negative seeds wrap.
+    h ⊻= _wang_hash(UInt32(qlen)) + _wang_hash(opt.seed % UInt32)
     return _wang_hash(h)
 end
 
@@ -86,8 +87,9 @@ end
     map_query(index, sequence, opt; qname=nothing) -> (regions, rep_len)
 
 Map one query (minimap2 `mm_map`): chaining, primary/secondary selection,
-divergence estimate and mapping quality. Base-level alignment (`F_CIGAR`) is not
-implemented yet.
+divergence estimate, base-level alignment with `F_CIGAR` and mapping quality.
+`qname` seeds the hash that breaks ties between equal chains, as on minimap2's
+command line; without it the seed is that of `--no-hash-name`.
 """
 function map_query(index::MinimapIndex, sequence::AbstractVector{UInt8}, opt::MapOptions; qname=nothing)
     regions, a, rep_len, mini_pos = map_chains(index, sequence, opt; qname)

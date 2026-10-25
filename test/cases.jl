@@ -6,7 +6,9 @@ const REFERENCE = joinpath(@__DIR__, "reference")
 # (name, references, reads)
 const DATASETS = [("amplicon", "amplicon_refs.fa", "amplicon_reads.fq"),
                   ("noisy", "noisy_refs.fa", "noisy_reads.fq"),
-                  ("hard", "hard_refs.fa", "hard_reads.fa")]
+                  ("hard", "hard_refs.fa", "hard_reads.fa"),
+                  # the inverted part ends in the padding of the striped query profile
+                  ("inversion", "inversion_refs.fa", "inversion_reads.fa")]
 const PRESETS = ["map-ont", "lr:hq", "map-pb"]
 
 paf_name(dataset, preset, cigar) = "$(dataset)_$(replace(preset, ':' => '_'))$(cigar ? "_cigar" : "").paf.gz"

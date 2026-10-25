@@ -24,6 +24,42 @@ end
     minimizers = sketch!(MM128[], Vector{UInt8}(codeunits("ACGTACGTTAGCATCGATCGACTAGCTAGCATCGACTGACTAGCTACG")), 5, 11, 0, false)
     @test !isempty(minimizers)
     @test_throws ArgumentError preset("unknown")
+    # minimap2's int seed wraps to 32 bits: -1 and 2^32 - 1 give the same tie-breaking hash.
+    _, mo = preset("map-ont")
+    mo.seed = -1; h = Minimap2._read_hash("read1", 1000, mo)
+    mo.seed = 0xffffffff; @test Minimap2._read_hash("read1", 1000, mo) == h
+end
+
+@testset "index" begin
+    # Above 1 Mb the index is built by several tasks; it must not depend on their number.
+    rng_state = UInt64(12345)
+    nextbase() = (rng_state = rng_state * 6364136223846793005 + 1442695040888963407; "ACGT"[(rng_state >> 62) + 1])
+    unit = [String([nextbase() for _ in 1:2000]) for _ in 1:40]
+    seqs = [unit[i % 40 + 1][1:(500 + 37i % 1500)] * unit[(7i) % 40 + 1] for i in 1:400]
+    seqs[3] = ""; seqs[5] = "ACGTN" ^ 200
+    for (k, w, hpc) in ((15, 10, false), (19, 19, true))
+        indexes = [MinimapIndex(seqs; k, w, hpc, threads) for threads in (1, 4)]
+        for f in (:keys, :starts, :positions, :directory, :directory_shift, :codes, :offsets, :lengths)
+            @test getfield(indexes[1], f) == getfield(indexes[2], f)
+        end
+        table = Dict{UInt64,Vector{UInt64}}()
+        for (rid, s) in enumerate(seqs)
+            isempty(s) && continue
+            for m in sketch!(MM128[], Vector{UInt8}(codeunits(s)), w, k, rid - 1, hpc)
+                push!(get!(Vector{UInt64}, table, m.x >> 8), m.y)
+            end
+        end
+        index = indexes[2]
+        @test length(index.keys) == length(table)
+        @test all(sort(v) == Minimap2.index_get(index, key) for (key, v) in table)
+        @test isempty(Minimap2.index_get(index, typemax(UInt64)))
+        @test all(isempty(Minimap2.index_get(index, key + 1)) for key in index.keys if !haskey(table, key + 1))
+        counts = sort!([length(v) for v in values(table)])
+        @test max_occurrence(index, 2.0f-4) == counts[unsafe_trunc(UInt32, (1.0 - Float64(2.0f-4)) * length(counts)) + 1] + 1
+    end
+    small = MinimapIndex(["ACGTACGTTAGCATCGATCGACTAGC"]; k=5, w=3)
+    @test !isempty(small.keys) && Minimap2.reference_codes(small, 0, 0, 4) == UInt8[0, 1, 2, 3]
+    @test_throws ArgumentError MinimapIndex(["ACGT"]; threads=0)
 end
 
 @testset "seeds and chains ($dataset)" for (dataset, refs, reads) in DATASETS
@@ -61,4 +97,18 @@ end
         append!(got, paf_line.(Ref(index), name, length(seq), regions, rep_len; flag=mo.flag))
     end
     @test got == reference_lines(paf_name(dataset, preset_name, cigar))
+end
+
+@testset "concurrent mapping ($dataset)" for (dataset, refs, reads) in DATASETS
+    # map_query keeps no shared state: reads mapped by several tasks give the same records.
+    index, mo = setup(refs, "map-ont")
+    mo.flag |= Minimap2.F_CIGAR | Minimap2.F_OUT_CG
+    queries = read_fastx(joinpath(DATA, reads))
+    records = Vector{Vector{String}}(undef, length(queries))
+    Threads.@threads for i in eachindex(queries)
+        name, seq = queries[i]
+        regions, rep_len = map_query(index, seq, mo; qname=name)
+        records[i] = paf_line.(Ref(index), name, length(seq), regions, rep_len; flag=mo.flag)
+    end
+    @test reduce(vcat, records) == reference_lines(paf_name(dataset, "map-ont", true))
 end

@@ -33,7 +33,7 @@ for (qi, (name, seq)) in enumerate(read_fastx(queries))
     global n_chains += length(regions)
     if got != blocks[qi]
         global bad += 1
-        bad <= 2 && println("query $qi ($name): $(length(got)) vs $(length(blocks[qi])) lines; first difference at ", findfirst(i -> i > length(blocks[qi]) || got[i] != blocks[qi][i], 1:length(got)))
+        bad <= 2 && println("query $qi ($name): $(length(got)) vs $(length(blocks[qi])) lines; first difference at ", findfirst(i -> i > length(got) || i > length(blocks[qi]) || got[i] != blocks[qi][i], 1:max(length(got), length(blocks[qi]))))
     end
 end
 println("$preset_name $(join(extra, ' ')): queries with different chains: $bad / $(length(blocks)) ($n_chains chains)")
