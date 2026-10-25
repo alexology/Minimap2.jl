@@ -3,9 +3,23 @@
 Native Julia port of [minimap2](https://github.com/lh3/minimap2) 2.30 (`UPSTREAM.toml`),
 written to give the same results as minimap2: same seeds, chains, mapping
 qualities, coordinates and CIGARs. It was started for
-[Savont.jl](../Savont.jl), whose upstream (savont 0.8.0) calls minimap2 2.30
+[Savont.jl](https://github.com/alexology/Savont.jl), whose upstream (savont 0.8.0) calls minimap2 2.30
 through the Rust crate, and is meant to be shared with other packages of this
 suite.
+
+This package is part of an experimental effort to use AI to port
+bioinformatics and quantitative ecology packages to Julia, with the goal of
+creating a unified environment for high performance scientific computing.
+
+## Install from GitHub
+
+This package is not registered in the Julia General registry. Install it
+from GitHub:
+
+```julia
+using Pkg
+Pkg.add(url="https://github.com/alexology/Minimap2.jl")
+```
 
 ## Status
 
