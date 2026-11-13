@@ -1,3 +1,4 @@
 # Pinned upstream checkout (see UPSTREAM.toml); build output of the oracle.
 /reference/
 Manifest.toml
+/docs/build/

@@ -168,7 +168,15 @@ function preset(name::AbstractString)
     return io, mo
 end
 
-# mm_mapopt_update: derive the occurrence threshold from the index.
+"""
+    update_options!(options::MapOptions, index::MinimapIndex) -> options
+
+Complete the mapping options from the index, as minimap2's `mm_mapopt_update`:
+derive the high-occurrence threshold `mid_occ` from `mid_occ_frac` (clamped to
+`min_mid_occ`/`max_mid_occ`) when it is not set, raise `bw_long` to at least `bw`,
+and set `F_SPLICE` when a splice strand flag is set. The minimap2 command line
+calls it after loading the index; call it before `map_query` to reproduce it.
+"""
 function update_options!(opt::MapOptions, index)
     if (opt.flag & F_SPLICE_FOR) != 0 || (opt.flag & F_SPLICE_REV) != 0
         opt.flag |= F_SPLICE

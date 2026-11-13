@@ -212,12 +212,17 @@ end
 end
 
 """
-    max_occurrence(index, fraction) -> Int
+    max_occurrence(index, fraction::Real) -> Int
 
 Occurrence threshold above which the top `fraction` of distinct minimizers lie
-(minimap2 `mm_idx_cal_max_occ`).
+(minimap2 `mm_idx_cal_max_occ`). `fraction` is converted to `Float32` first, like
+minimap2's `float` option `-f`, so `0.01` and `0.01f0` give the same threshold.
+A `fraction <= 0` disables the threshold (`typemax(Int32)`); `fraction` must not
+exceed 1.
 """
-function max_occurrence(index::MinimapIndex, fraction::Float32)
+function max_occurrence(index::MinimapIndex, fraction::Real)
+    fraction = Float32(fraction)
+    (isnan(fraction) || fraction > 1) && throw(ArgumentError("fraction must be at most 1, got $fraction"))
     fraction <= 0 && return Int(typemax(Int32))
     isempty(index.keys) && return Int(typemax(Int32))
     counts = diff(index.starts)

@@ -1,5 +1,8 @@
 # Minimap2.jl
 
+[![CI](https://github.com/alexology/Minimap2.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/alexology/Minimap2.jl/actions/workflows/CI.yml)
+[![Docs](https://img.shields.io/badge/docs-dev-blue.svg)](https://alexology.github.io/Minimap2.jl/dev/)
+
 Native Julia port of [minimap2](https://github.com/lh3/minimap2) 2.30 (`UPSTREAM.toml`),
 written to give the same results as minimap2: same seeds, chains, mapping
 qualities, coordinates and CIGARs. It was started for

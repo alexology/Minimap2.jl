@@ -56,6 +56,13 @@ end
         @test all(isempty(Minimap2.index_get(index, key + 1)) for key in index.keys if !haskey(table, key + 1))
         counts = sort!([length(v) for v in values(table)])
         @test max_occurrence(index, 2.0f-4) == counts[unsafe_trunc(UInt32, (1.0 - Float64(2.0f-4)) * length(counts)) + 1] + 1
+        # Any real fraction is accepted and rounded to Float32 like minimap2's float option.
+        @test max_occurrence(index, 2.0e-4) == max_occurrence(index, 2.0f-4)
+        @test max_occurrence(index, 0.01) == max_occurrence(index, 0.01f0)
+        @test max_occurrence(index, 0) == typemax(Int32)
+        @test max_occurrence(index, 1) == counts[1] + 1
+        @test_throws ArgumentError max_occurrence(index, 1.5)
+        @test_throws ArgumentError max_occurrence(index, NaN)
     end
     small = MinimapIndex(["ACGTACGTTAGCATCGATCGACTAGC"]; k=5, w=3)
     @test !isempty(small.keys) && Minimap2.reference_codes(small, 0, 0, 4) == UInt8[0, 1, 2, 3]

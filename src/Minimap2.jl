@@ -1,6 +1,14 @@
+"""
+    Minimap2
+
+Native Julia port of minimap2 2.30 for single-segment, unspliced long-read mapping.
+It gives the same seeds, chains, mapping qualities, coordinates and CIGARs as
+minimap2. Main entry points: `preset`, `MinimapIndex`,
+`map_query` and `paf_line`.
+"""
 module Minimap2
 
-using Printf
+using Printf: @sprintf
 
 include("options.jl")
 include("sort.jl")
